@@ -14,7 +14,7 @@ from config import Config
 
 config = Config()
 
-# TODO 将制定目录的路径进行添加
+# TODO 将指定目录的路径进行添加
 from tqdm import tqdm
 
 from model import TrackLSTM
@@ -78,9 +78,10 @@ class ModelTrainValid():
                 self.optimizer.step()
                 each_batch_loss.append(this_batch_loss.detach())  # 获取该批次损失
 
-                predict_y_batch = torch.max(model_out, 1)[1].data.numpy()
+                test = torch.max(model_out, 1)
+                predict_y_batch = torch.max(model_out, 1)[1].data.cpu().numpy()
                 predict_y_epoch.extend(predict_y_batch)
-                real_y_batch = track_label.view(track_label.size(0)).data.numpy()
+                real_y_batch = track_label.view(track_label.size(0)).data.cpu().numpy()
                 real_y_epoch.extend(real_y_batch)
 
                 if train_log:
@@ -147,9 +148,9 @@ class ModelTrainValid():
                 this_batch_size = model_out.shape[0]
                 this_batch_loss = self.__loss_calculate(model_out, track_label)
 
-                predict_y_batch = torch.max(model_out, 1)[1].data.numpy()
+                predict_y_batch = torch.max(model_out, 1)[1].data.cpu().numpy()
                 predict_y_epoch.extend(predict_y_batch)
-                real_y_batch = track_label.view(track_label.size(0)).data.numpy()
+                real_y_batch = track_label.view(track_label.size(0)).data.cpu().numpy()
                 real_y_epoch.extend(real_y_batch)
 
                 if val_log:
@@ -195,7 +196,7 @@ class ModelTrainValid():
 
 
 if __name__ == "__main__":
-    tracks = merge_read_csv(config.abnormal_tra_500_dataset, config.normal_tra_dataset)
+    tracks = merge_read_csv(config.abnormal_tra_1500_dataset, config.normal_tra_dataset)
 
     tracks, max_track_dot = track_process(tracks)
     train_track, valid_track, infer_track = split_train_valid_infer(tracks, config)
