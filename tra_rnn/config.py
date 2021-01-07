@@ -34,7 +34,7 @@ class Config():
         self.classes = 2  # 标签类别
 
         self.epochs = 100
-        self.batch_size = 64
+        self.batch_size = 4
 
         self.train_ratio = 0.8
         self.valid_ratio = 0.05
@@ -43,6 +43,7 @@ class Config():
         self.bi_lstm = True
         self.n_layers = 2
         self.dropout = 0.5
+        self.hidden_size = 4
 
         self.lr = 2e-3
         self.grad_clip = 50.0

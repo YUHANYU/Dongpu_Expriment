@@ -55,7 +55,7 @@ class ModelTrainValid():
                 '损失：{loss:10.6f}\n\n, '
                     .format(epoch=0, batch_size=0, loss=0))
 
-        for epoch_idx, epoch in enumerate(range(self.config.epochs)):
+        for epoch_idx, epoch in enumerate(range(self.config.epochs)):  # 轮次循环
             print('[训练轮次 {}]'.format(epoch_idx))
             step = 0  # 每个轮次的批次数
             epoch_start_time = datetime.datetime.now()  # 一个轮次模型的计算开始时间
@@ -65,8 +65,9 @@ class ModelTrainValid():
 
             self.model.train()
             self.optimizer.zero_grad()
-            for batch_idx, batch_data in enumerate(
-                    tqdm(self.train_data_loader, desc='Training...', leave=False)):
+            # for batch_idx, batch_data in enumerate(
+            #         tqdm(self.train_data_loader, desc='Training...', leave=False)):
+            for batch_idx, batch_data in enumerate(self.train_data_loader):  # 批次循环
                 self.train_all_batch += 1
                 step += 1
 
@@ -84,7 +85,7 @@ class ModelTrainValid():
                 real_y_batch = track_label.view(track_label.size(0)).data.cpu().numpy()
                 real_y_epoch.extend(real_y_batch)
 
-                if train_log:
+                if train_log:  # 训练日志
                     train_log.write(
                         '轮次：{epoch:3.0f}, 当前批次：{step:3.0f}, '
                         '累计批次：{total_step:7.0f}, '
@@ -108,6 +109,7 @@ class ModelTrainValid():
                   '| F1分数F1-Score %4.2f' % f1_score,
                   '| 首批损失 %10.7f' % each_batch_loss[0],
                   '| 尾批损失 %10.7f' % each_batch_loss[-1])
+
             if train_log:
                 train_log.write(
                     '精确度{pre:6.3f} | 准确率acc{acc:6.3f} | 召回率Recall{recall:6.3f} '
@@ -141,8 +143,9 @@ class ModelTrainValid():
         real_y_epoch = []
 
         with torch.no_grad():  # 设置验证产生的损失不更新模型
-            for _, batch_data in enumerate(tqdm(
-                    self.valid_data_loader, desc='Validating...', leave=False)):
+            # for _, batch_data in enumerate(tqdm(
+            #         self.valid_data_loader, desc='Validating...', leave=False)):
+            for _, batch_data in enumerate(self.valid_data_loader):
                 track_seq, track_seq_len, track_label, _ = batch_2_tensor(batch_data)
                 model_out = self.model(track_seq, track_seq_len)
                 this_batch_size = model_out.shape[0]
@@ -164,7 +167,7 @@ class ModelTrainValid():
                   '| 精确度Pre %4.2f' % pre,
                   '| 准确率Acc %4.2f' % acc,
                   '| 找回率Recall %4.2f' % recall,
-                  '| F1分数F1-Score %4.2f\n' % f1_score)
+                  '| F1分数F1-Score %4.2f' % f1_score)
 
         if config.save_trained_model:
             model_state_dict = self.model.state_dict()  # 保存训练模型状态
@@ -184,7 +187,7 @@ class ModelTrainValid():
                 if f1_score >= max(self.val_f1_all):
                     torch.save(checkpoint, model_name)
                     self.save_checkpoint += 1
-                    print('已经第{}次更新模型最佳保存点！'.format(self.save_checkpoint))
+                    print('已经第{}次更新模型最佳保存点！\n'.format(self.save_checkpoint))
 
     def __metrics(self, y_pred, y_ture):
         accuracy = round(accuracy_score(y_ture, y_pred), 2)
@@ -211,7 +214,7 @@ if __name__ == "__main__":
 
     track_lstm_model = TrackLSTM(  # 轨迹LSTM
         input_size=max_track_dot,
-        hidden_size=64,
+        hidden_size=config.hidden_size,
         bi_lstm=config.bi_lstm,
         n_layers=config.n_layers,
         dropout=config.dropout).to(config.device)
