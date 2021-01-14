@@ -59,12 +59,12 @@ class TrackLSTM(nn.Module):
                      output[:, :, self.hidden_size:]  # 双向叠加
 
         output_1 = output.transpose(0, 1)
-        # output = output[:, -1, :]  # FIXME 这里转化有问题
-        output_2 = output_1.permute(0, 2, 1)[:, :, -1]
+        output_2 = output[:, -1, :]  # FIXME 这里转化有问题
+        # output_2 = output_1.permute(0, 2, 1)[:, :, -1]
 
         output_3 = self.dense(output_2)
 
-        return output
+        return output_3
 
     def __init_lstm_hidden(self):
         # TODO 初始化LSTM隐藏层
