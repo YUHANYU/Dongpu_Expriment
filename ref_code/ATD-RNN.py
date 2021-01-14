@@ -110,8 +110,8 @@ class RNN(object):  # RNN基本类
 
 
 def loadData():
-    TRAINDIR = "..\\ref_code\\output data/Porto/Train_2_3_4.txt"
-    TESTDIR = "..\\ref_code\\output data/Porto/Test_2_3_4.txt"
+    TRAINDIR = "..\\data\\atd-rnn\\Train_2_3_4.txt"
+    TESTDIR = "..\\data\\atd-rnn\\Test_2_3_4.txt"
     train_data = []
     train_labels = []
     test_data = []
@@ -211,7 +211,7 @@ def loadTestData(filename):
     return res_data, res_labels, res_seq_length
 
 
-testDirs = ["..\\ref_code\\output data/Porto/rnnTest%d.txt" % i for i in testIds]
+testDirs = ["..\\data\\atd-rnn\\rnnTest%d.txt" % i for i in testIds]
 # tmp_data, tmp_labels, tmp_seq = loadTestData(testDirs[0])
 # dfData = pd.DataFrame(tmp_data)
 # dfData
