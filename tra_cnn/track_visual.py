@@ -50,14 +50,14 @@ def read_csv(file):
     track_dict = {}  # 空轨迹字典
     for idx, row in enumerate(csv_reader):
         tra = {}  # 单条轨迹的字典
-        tra['id'] = row[1]  # 轨迹id号
-        tra['latitude'] = eval(row[2])  # 轨迹纬度数组
-        tra['longitude'] = eval(row[3])  # 轨迹经度数组
-        tra['grid_point'] = eval(row[4])  # 轨迹网格点
-        tra['call_type'] = row[5]  # 出租车呼叫类型
-        tra['taxi_id'] = row[6]  # 出租车id
-        tra['timestamp'] = row[7]  # 轨迹时间戳
-        tra['label'] = row[8]  # 轨迹标签，0为正常轨迹，1为异常轨迹
+        tra['id'] = row[0]  # 轨迹id号
+        tra['latitude'] = eval(row[1])  # 轨迹纬度数组
+        tra['longitude'] = eval(row[2])  # 轨迹经度数组
+        tra['grid_point'] = eval(row[3])  # 轨迹网格点
+        tra['call_type'] = row[4]  # 出租车呼叫类型
+        tra['taxi_id'] = row[5]  # 出租车id
+        tra['timestamp'] = row[6]  # 轨迹时间戳
+        tra['label'] = row[7]  # 轨迹标签，0为正常轨迹，1为异常轨迹
 
         track_dict[str(idx)] = tra  # 将每条轨迹存储到轨迹字典中
 
@@ -135,9 +135,9 @@ if __name__ == "__main__":
     run_parm = {'Grid200':{'length': 240, 'width': 180},
                 'Grid300':{'length': 165, 'width': 120},
                 'Grid400':{'length': 124, 'width': 90}}
-    base_path = '..\\data\\'
+    base_path = '.\\data\\'
     grids = ['Grid200\\', 'Grid300\\', 'Grid400\\']
-    save_base_path = '..\\save\\cnn_save\\'
+    save_base_path = '.\\save\\cnn_save\\'
     for grid in grids:
         files = os.listdir(base_path + grid)
         for f in files:
