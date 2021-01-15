@@ -113,13 +113,13 @@ def track_2_picture(data_set, save_path, length, width, show_line=0, display_pic
             length_idx, width_idx = location[0][0], location[0][1]  # 获取轨迹点坐标
             track_picture[length_idx][width_idx] += 85  # 轨迹点数值变大，对应颜色加深
 
-        ax = sns.heatmap(track_picture, cmap='CMRmap_r', xticklabels=0, yticklabels=0, cbar=0, vmin=0,
-                    vmax=999, linewidths=0.009,
-                    linecolor='gainsboro' if show_line else 'white')  # 轨迹热力图
-        heatmap = ax.get_figure()
+        linecolor = 'gainsboro' if show_line else 'white'
+        linewidths = 0.009 if show_line else 0
+        sns.heatmap(track_picture, cmap='CMRmap_r', xticklabels=0, yticklabels=0, cbar=0, vmin=0,
+                    vmax=999, linewidths=linewidths, linecolor=linecolor)  # 轨迹热力图
         pic_name = str(round(float(track_id), 5)) + "_" + \
                    str(int(track_label[0])) + '.jpg'  # 轨迹图片命名
-        heatmap.savefig(save_path + pic_name, dpi=800)  # 轨迹图片保存
+        plt.savefig(save_path + pic_name, dpi=800)  # 轨迹图片保存
         if display_pic:  # 是否展示图片
             plt.show()
         plt.clf()  # 重置画布
@@ -135,9 +135,9 @@ if __name__ == "__main__":
     run_parm = {'Grid200':{'length': 240, 'width': 180},
                 'Grid300':{'length': 165, 'width': 120},
                 'Grid400':{'length': 124, 'width': 90}}
-    base_path = '.\\data\\'
+    base_path = '..\\data\\'
     grids = ['Grid200\\', 'Grid300\\', 'Grid400\\']
-    save_base_path = '.\\save\\cnn_save\\'
+    save_base_path = '..\\save\\cnn_save\\'
     for grid in grids:
         files = os.listdir(base_path + grid)
         for f in files:
