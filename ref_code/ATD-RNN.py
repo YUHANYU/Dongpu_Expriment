@@ -1,5 +1,8 @@
 # coding: utf-8
 
+# In[1]:
+
+
 import os
 import sys
 import time
@@ -16,47 +19,53 @@ import tensorflow as tf
 from sklearn import metrics
 import matplotlib.pyplot as plt
 
+# get_ipython().run_line_magic('matplotlib', 'inline')
+
+# In[2]:
+
+
 testIds = [2, 3, 4]
 
 
+# In[3]:
+
+
 class Config(object):
-    """RNN Configure RNN层的基本配置"""
+    """RNN Configure"""
 
-    embedding_dim = 128  # 词向量维度
-    seq_length = 1000  # 轨迹长度（轨迹点个数）
-    num_classes = 2  # 轨迹的类别（正常或者异常）
-    vocab_size = 5000  # 轨迹点个数
+    embedding_dim = 128
+    seq_length = 1000
+    num_classes = 2
+    vocab_size = 5000
 
-    num_layers = 4  # RNN层数
-    hidden_dim = 128  # RNN隐藏层大小
-    rnn = 'lstm'  # RNN单元类型，LSTM
+    num_layers = 4
+    hidden_dim = 128
+    rnn = 'lstm'
 
-    dropout_keep_prob = 0.5  # dropout大小
-    learning_rate = 1e-4  # 学习率
+    dropout_keep_prob = 0.5
+    learning_rate = 1e-4
 
-    batch_size = 32  # 批大小
-    num_epochs = 40  # 训练轮次
+    batch_size = 32
+    num_epochs = 40
 
 
-class RNN(object):  # RNN基本类
+# In[4]:
+
+
+class RNN(object):
     def __init__(self, config):
         self.config = config
 
-        # 预声明输入RNN的矩阵大小，none * 最大轨迹长度
         self.input_x = tf.placeholder(tf.int32, [None, self.config.seq_length])
-        # 预声明RNN输出的矩阵大小，none * 轨迹类别
         self.input_y = tf.placeholder(tf.float32, [None, self.config.num_classes])
-        # 未知
         self.keep_prob = tf.placeholder(tf.float32, [], name="keep_prob")
-        #  预声明轨迹长度
         self.seq_length = tf.placeholder(tf.int32, [None])
         self.rnn()
 
     def rnn(self):
 
         def lstm_cell():
-            return tf.nn.rnn_cell.BasicLSTMCell(
-                self.config.hidden_dim, forget_bias=1.0, state_is_tuple=True)
+            return tf.nn.rnn_cell.BasicLSTMCell(self.config.hidden_dim, forget_bias=1.0, state_is_tuple=True)
 
         def gru_cell():
             return tf.contrib.rnn.GRUCell(self.config.hidden_dim)
@@ -69,44 +78,42 @@ class RNN(object):  # RNN基本类
             return tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=self.keep_prob)
 
         # with tf.device('/gpu:0'):
-        with tf.device('cpu'):  # embeddings层
-            embedding = tf.get_variable(
-                "embedding", [self.config.vocab_size, self.config.embedding_dim])
+        with tf.device('cpu'):
+            embedding = tf.get_variable("embedding", [self.config.vocab_size, self.config.embedding_dim])
             embedding_inputs = tf.nn.embedding_lookup(embedding, self.input_x)
 
-        with tf.name_scope("rnn"):  # LSTM计算层
+        with tf.name_scope("rnn"):
             cells = [dropout() for _ in range(self.config.num_layers)]
             rnn_cell = tf.contrib.rnn.MultiRNNCell(cells, state_is_tuple=True)
 
             embedding_inputs = tf.transpose(embedding_inputs, [1, 0, 2])
-            _outputs, self._states = tf.nn.dynamic_rnn(
-                cell=rnn_cell, inputs=embedding_inputs, sequence_length=self.seq_length,
-                time_major=True, dtype=tf.float32)
+            _outputs, self._states = tf.nn.dynamic_rnn(cell=rnn_cell, inputs=embedding_inputs,
+                                                       sequence_length=self.seq_length, time_major=True,
+                                                       dtype=tf.float32)
             _outputs = tf.transpose(_outputs, [1, 0, 2])
-            print('经过LSTM计算的输出', _outputs.shape)
             # last = _outputs[:,-1,:]
             print(self._states)
             last = tf.concat([item.c for item in self._states], axis=1)
 
-        with tf.name_scope("score"):  # 输出层
+        with tf.name_scope("score"):
             fc = tf.layers.dense(last, self.config.hidden_dim, name='fc1')
             # fc = tf.contrib.layers.dropout(fc, self.keep_prob)
             fc = tf.nn.sigmoid(fc)
 
             self.logits = tf.layers.dense(fc, self.config.num_classes, name="fc2")
-            print(self.logits.shape)
             self.y_pred_cls = tf.argmax(tf.nn.softmax(self.logits), 1)
 
-        with tf.name_scope("optimize"):  # 损失函数计算、优化器层
-            cross_entropy = tf.nn.softmax_cross_entropy_with_logits(
-                logits=self.logits, labels=self.input_y)
+        with tf.name_scope("optimize"):
+            cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.input_y)
             self.loss = tf.reduce_mean(cross_entropy)
-            self.optim = tf.train.AdamOptimizer(
-                learning_rate=self.config.learning_rate).minimize(self.loss)
+            self.optim = tf.train.AdamOptimizer(learning_rate=self.config.learning_rate).minimize(self.loss)
 
         with tf.name_scope("accuracy"):
             correct_pred = tf.equal(tf.argmax(self.input_y, 1), self.y_pred_cls)
             self.acc = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+
+
+# In[5]:
 
 
 def loadData():
@@ -178,9 +185,10 @@ def loadData():
     return train_data, train_labels, train_seq_length, test_data, test_labels, test_seq_length, max_length, word2id, id2word
 
 
-train_data, train_labels, train_seq_length, \
-test_data, test_labels, test_seq_length, \
-max_length, word2id, id2word = loadData()
+# In[6]:
+
+
+train_data, train_labels, train_seq_length, test_data, test_labels, test_seq_length, max_length, word2id, id2word = loadData()
 n = len(train_data)
 index = np.random.permutation(n)
 train_data = np.array(train_data)
@@ -189,6 +197,9 @@ train_labels = np.array(train_labels)
 train_labels = train_labels[index].tolist()
 train_seq_length = np.array(train_seq_length)
 train_seq_length = train_seq_length[index].tolist()
+
+
+# In[7]:
 
 
 def loadTestData(filename):
@@ -211,6 +222,9 @@ def loadTestData(filename):
     return res_data, res_labels, res_seq_length
 
 
+# In[8]:
+
+
 testDirs = ["..\\data\\atd-rnn\\rnnTest%d.txt" % i for i in testIds]
 # tmp_data, tmp_labels, tmp_seq = loadTestData(testDirs[0])
 # dfData = pd.DataFrame(tmp_data)
@@ -219,10 +233,14 @@ testDirs = ["..\\data\\atd-rnn\\rnnTest%d.txt" % i for i in testIds]
 
 # In[9]:
 
+
 print("train neg percent: ")
 print(sum([item[1] for item in train_labels]) / len(train_labels))
 print("test neg percent: ")
 print(sum(item[1] for item in test_labels) / len(test_labels))
+
+
+# In[10]:
 
 
 def generate_batch(train_data, train_labels, train_seq_length, batch_size):
@@ -245,10 +263,16 @@ def generate_batch(train_data, train_labels, train_seq_length, batch_size):
         yield train_data[start: end].tolist(), train_labels[start: end].tolist(), seq_length[start: end].tolist()
 
 
+# In[11]:
+
+
 config = Config()
 config.seq_length = max_length
 config.vocab_size = len(word2id)
 model = RNN(config)
+
+# In[12]:
+
 
 accs = []
 precisions = []
@@ -323,11 +347,17 @@ def train():
                 f1s.append(tmp_f1)
                 print(
                     "at step %d loss=%.6f \t acc=%.6f \t test_acc = %.6f\n _acc=%s\n precisions=%s \n recalls=%s \n f1=%s" % (
-                        step, _loss, _acc, _test_acc, tmp, tmp_precision, tmp_recall, tmp_f1))
+                    step, _loss, _acc, _test_acc, tmp, tmp_precision, tmp_recall, tmp_f1))
                 step += 1
 
 
+# In[13]:
+
+
 train()
+
+# In[14]:
+
 
 index = np.argmax(accs, axis=0)
 accs = np.array(accs)
@@ -338,4 +368,8 @@ recalls = np.array(recalls)
 print("recall", recalls[index, [0, 1, 2, 3]])
 f1s = np.array(f1s)
 print("f1:", f1s[index, [0, 1, 2, 3]])
+
+# In[15]:
+
+
 print("Done!")
