@@ -1,60 +1,50 @@
-# coding: utf-8
+r"""
+ATD-RNN模型训练和验证
+"""
 
-# In[1]:
-
-
-import os
-import sys
-import time
-import math
 import copy
-import heapq
 import random
-import threading
-import collections
-
 import numpy as np
-import pandas as pd
 import tensorflow as tf
 from sklearn import metrics
-import matplotlib.pyplot as plt
-
-testIds = [2, 3, 4]
+import os
 
 
 class Config(object):
-    """RNN Configure"""
+    """参数类"""
 
-    embedding_dim = 128
-    seq_length = 1000
-    num_classes = 2
-    vocab_size = 5000
+    embedding_dim = 128  # 嵌入层大小
+    seq_length = 1000  # 轨迹点最大长度
+    num_classes = 2  # 轨迹类别
+    vocab_size = 5000  #轨迹点最大个数
 
-    num_layers = 4
-    hidden_dim = 128
-    rnn = 'lstm'
+    num_layers = 4  # RNN层数
+    hidden_dim = 128  # RNN隐藏层大小
+    rnn = 'lstm'  # RNN类型
 
-    dropout_keep_prob = 0.5
-    learning_rate = 1e-4
+    dropout_keep_prob = 0.5  # dropout大小
+    learning_rate = 1e-4  # 损失函数学习率
 
-    batch_size = 32
-    num_epochs = 40
+    batch_size = 32  # 批大小
+    num_epochs = 40  # 训练轮次
 
 
 class RNN(object):
+    """ATD-RNN核心计算模型"""
     def __init__(self, config):
-        self.config = config
+        self.config = config  # 配置类对象
 
-        self.input_x = tf.placeholder(tf.int32, [None, self.config.seq_length])
-        self.input_y = tf.placeholder(tf.float32, [None, self.config.num_classes])
-        self.keep_prob = tf.placeholder(tf.float32, [], name="keep_prob")
-        self.seq_length = tf.placeholder(tf.int32, [None])
+        self.input_x = tf.placeholder(tf.int32, [None, self.config.seq_length])  # 模型x输入，None*轨迹线最大值
+        self.input_y = tf.placeholder(tf.float32, [None, self.config.num_classes])  # 模型y输入，None*轨迹类别
+        self.keep_prob = tf.placeholder(tf.float32, [], name="keep_prob")  # dropout层，[]
+        self.seq_length = tf.placeholder(tf.int32, [None])  # 序列长度，[None]
         self.rnn()
 
     def rnn(self):
 
         def lstm_cell():
-            return tf.nn.rnn_cell.BasicLSTMCell(self.config.hidden_dim, forget_bias=1.0, state_is_tuple=True)
+            return tf.nn.rnn_cell.BasicLSTMCell(self.config.hidden_dim,
+                                                forget_bias=1.0, state_is_tuple=True)
 
         def gru_cell():
             return tf.contrib.rnn.GRUCell(self.config.hidden_dim)
@@ -66,7 +56,7 @@ class RNN(object):
                 cell = gru_cell()
             return tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=self.keep_prob)
 
-        # with tf.device('/gpu:0'):
+        # with tf.device('/gpu:0'):  # 选择GPU还是CPU跑模型
         with tf.device('cpu'):
             embedding = tf.get_variable("embedding", [self.config.vocab_size, self.config.embedding_dim])
             embedding_inputs = tf.nn.embedding_lookup(embedding, self.input_x)
@@ -93,24 +83,31 @@ class RNN(object):
             self.y_pred_cls = tf.argmax(tf.nn.softmax(self.logits), 1)
 
         with tf.name_scope("optimize"):
-            cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.input_y)
+            cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=self.logits,
+                                                                    labels=self.input_y)
             self.loss = tf.reduce_mean(cross_entropy)
-            self.optim = tf.train.AdamOptimizer(learning_rate=self.config.learning_rate).minimize(self.loss)
+            self.optim = tf.train.AdamOptimizer(
+                learning_rate=self.config.learning_rate).minimize(self.loss)
 
         with tf.name_scope("accuracy"):
             correct_pred = tf.equal(tf.argmax(self.input_y, 1), self.y_pred_cls)
             self.acc = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
 
-
-def loadData():
-    TRAINDIR = "..\\data\\atd-rnn\\Train_2_3_4.txt"
-    TESTDIR = "..\\data\\atd-rnn\\Test_2_3_4.txt"
+def load_data(train_dir, test_dir):
+    """
+    加载数据
+    :param train_dir: 训练数据集
+    :param test_dir: 测试数据集
+    :return:
+    """
+    # train_dir = "..\\data\\atd-rnn\\Train_2_3_4.txt"  # 训练数据集
+    # test_dir = "..\\data\\atd-rnn\\Test_2_3_4.txt"  # 验证数据集
     train_data = []
     train_labels = []
     test_data = []
     test_labels = []
-    with open(TRAINDIR, "r") as fin:
+    with open(train_dir, "r") as fin:
         for line in fin:
             tmp = line.strip().split(" ")
             train_data.append(tmp[2:])
@@ -132,7 +129,7 @@ def loadData():
                     train_labels.append(copy.deepcopy(train_labels[-1]))
             else:
                 train_labels.append([1, 0])
-    with open(TESTDIR, "r") as fin:
+    with open(test_dir, "r") as fin:
         for line in fin:
             tmp = line.strip().split(" ")
             test_data.append(tmp[2:])
@@ -169,21 +166,18 @@ def loadData():
     for i, line in enumerate(test_data):
         if (len(line) < max_length):
             line.extend([0] * (max_length - len(line)))
-    return train_data, train_labels, train_seq_length, test_data, test_labels, test_seq_length, max_length, word2id, id2word
+
+    return train_data, train_labels, train_seq_length, \
+           test_data, test_labels, test_seq_length, \
+           max_length, word2id, id2word
 
 
-train_data, train_labels, train_seq_length, test_data, test_labels, test_seq_length, max_length, word2id, id2word = loadData()
-n = len(train_data)
-index = np.random.permutation(n)
-train_data = np.array(train_data)
-train_data = train_data[index].tolist()
-train_labels = np.array(train_labels)
-train_labels = train_labels[index].tolist()
-train_seq_length = np.array(train_seq_length)
-train_seq_length = train_seq_length[index].tolist()
-
-
-def loadTestData(filename):
+def load_test_data(filename):
+    """
+    加载测试数据
+    :param filename:  文件名
+    :return:
+    """
     res_data = []
     res_labels = []
     res_seq_length = []
@@ -203,16 +197,15 @@ def loadTestData(filename):
     return res_data, res_labels, res_seq_length
 
 
-testDirs = ["..\\data\\atd-rnn\\rnnTest%d.txt" % i for i in testIds]
-
-
-print("train neg percent: ")
-print(sum([item[1] for item in train_labels]) / len(train_labels))
-print("test neg percent: ")
-print(sum(item[1] for item in test_labels) / len(test_labels))
-
-
 def generate_batch(train_data, train_labels, train_seq_length, batch_size):
+    """
+    生成批数据
+    :param train_data: 训练数据
+    :param train_labels: 训练数据的标签
+    :param train_seq_length: 训练数据的长度
+    :param batch_size: 批大小
+    :return:
+    """
     train_data = np.array(train_data)
     train_labels = np.array(train_labels)
     seq_length = np.array(train_seq_length)
@@ -232,31 +225,20 @@ def generate_batch(train_data, train_labels, train_seq_length, batch_size):
         yield train_data[start: end].tolist(), train_labels[start: end].tolist(), seq_length[start: end].tolist()
 
 
-config = Config()
-config.seq_length = max_length
-config.vocab_size = len(word2id)
-model = RNN(config)
-
-
-accs = []
-precisions = []
-recalls = []
-f1s = []
-
-
-def train():
-    global accs, recalls
+def train(train_data, train_label, train_seq_length, model):
+    acc_value = []
+    recall_value = []
+    precision_value = []
+    f1_value = []
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         step = 0
         acc = 0
         allAcc = 0
         for i in range(model.config.num_epochs):
-            for batch_x, batch_y, batch_length in generate_batch(train_data, train_labels, train_seq_length,
+            for batch_x, batch_y, batch_length in generate_batch(train_data, train_label, train_seq_length,
                                                                  model.config.batch_size):
-                # print(batch_x)
-                # print(batch_y)
-                # print(batch_length)
+
                 _states, _loss, _ = sess.run([model._states, model.loss, model.optim], feed_dict={
                     model.input_x: batch_x,
                     model.input_y: batch_y,
@@ -277,18 +259,13 @@ def train():
                     model.keep_prob: model.config.dropout_keep_prob,
                     model.seq_length: test_seq_length
                 })
-                # print(_loss)
 
-                # print(len(_states))
-                # print(len(_states[0]))
-                # print(_states)
-                # print(_predict)
                 tmp = [_test_acc]
                 tmp_precision = [0]
                 tmp_recall = [0]
                 tmp_f1 = [0]
                 for filename in testDirs:
-                    tmp_data, tmp_labels, tmp_seq = loadTestData(filename)
+                    tmp_data, tmp_labels, tmp_seq = load_test_data(filename)
                     predict = sess.run(model.y_pred_cls, feed_dict={
                         model.input_x: tmp_data,
                         model.input_y: tmp_labels,
@@ -305,29 +282,44 @@ def train():
                     tmp_precision.append(precision)
                     tmp_recall.append(recall)
                     tmp_f1.append(f1)
-                accs.append(tmp)
-                precisions.append(tmp_precision)
-                recalls.append(tmp_recall)
-                f1s.append(tmp_f1)
+                acc_value.append(tmp)
+                precision_value.append(tmp_precision)
+                recall_value.append(tmp_recall)
+                f1_value.append(tmp_f1)
                 print(
                     "at step %d loss=%.6f \t acc=%.6f \t test_acc = %.6f\n _acc=%s\n precisions=%s \n recalls=%s \n f1=%s" % (
                         step, _loss, _acc, _test_acc, tmp, tmp_precision, tmp_recall, tmp_f1))
                 step += 1
 
+    return acc_value, precision_value, recall_value, f1_value
 
 
-train()
+if __name__ == "__main__":
+    ####### 训练过程 ##########
+    train_dir = None
+    test_dir = None
+    train_data, train_labels, train_seq_length, \
+    test_data, test_labels, test_seq_length, \
+    max_length, word2id, id2word = load_data(train_dir, test_dir)
+    n = len(train_data)
+    index = np.random.permutation(n)
+    train_data = np.array(train_data)
+    train_data = train_data[index].tolist()
+    train_labels = np.array(train_labels)
+    train_labels = train_labels[index].tolist()
+    train_seq_length = np.array(train_seq_length)
+    train_seq_length = train_seq_length[index].tolist()
+
+    print("训练集中异常轨迹的比例: {}".  # TODO 这里要搞清楚比例是怎么算出来的
+          format(sum([item[1] for item in train_labels]) / len(train_labels)))
+    print("测试集中异常轨迹的比例: {}".  # TODO 这里要搞清楚比例是怎么算出来的
+          format(sum(item[1] for item in test_labels) / len(test_labels)))
+
+    config = Config()
+    config.seq_length = max_length
+    config.vocab_size = len(word2id)
+    model = RNN(config)
 
 
-index = np.argmax(accs, axis=0)
-accs = np.array(accs)
-print("accs:", accs[index, [0, 1, 2, 3]])
-precisions = np.array(precisions)
-print("precision:", precisions[index, [0, 1, 2, 3]])
-recalls = np.array(recalls)
-print("recall", recalls[index, [0, 1, 2, 3]])
-f1s = np.array(f1s)
-print("f1:", f1s[index, [0, 1, 2, 3]])
 
 
-print("Done!")

@@ -3,6 +3,7 @@ r"""
 """
 import csv
 import os
+from sklearn.model_selection import train_test_split
 
 
 def read_csv(file):
@@ -29,6 +30,7 @@ def read_csv(file):
 
     return track_dict
 
+
 def write_txt(base_path, dataset, save_path):
     """
     将数据集写成指定格式的TXT文件
@@ -49,6 +51,20 @@ def write_txt(base_path, dataset, save_path):
             for i in grid_point:
                 f.write(str(i) + ' ')
             f.write('\n')
+    with open(file, 'r', encoding='utf-8') as f_2:
+        contend = f_2.readlines()
+        train_data, test_data = train_test_split(contend, shuffle=True, train_size=0.7, test_size=0.3,
+                                                 random_state=2021)
+
+        train_f = save_path + dataset.split('.csv')[0] + '_train.txt'
+        with open(train_f, 'w', encoding='utf-8') as f_3:
+            for row in train_data:
+                f_3.write(row)
+
+        test_f = save_path + dataset.split('.csv')[0] + '_test.txt'
+        with open(test_f, 'w', encoding='utf-8') as f_4:
+            for row in test_data:
+                f_4.write(row)
 
 
 if __name__ == "__main__":
