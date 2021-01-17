@@ -78,10 +78,10 @@ def track_2_picture(data_set, save_path, length, width, show_line=0, display_pic
     start_time = time.time()
 
     # 热力图底图
-    plt.gca().xaxis.set_major_locator(plt.NullLocator())
-    plt.gca().yaxis.set_major_locator(plt.NullLocator())
-    plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
-    plt.margins(0, 0)
+    # plt.gca().xaxis.set_major_locator(plt.NullLocator())
+    # plt.gca().yaxis.set_major_locator(plt.NullLocator())
+    # plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
+    # plt.margins(0, 0)
 
     track_dict = read_csv(data_set)  # 读取轨迹数据集形成轨迹字典
 
@@ -101,6 +101,7 @@ def track_2_picture(data_set, save_path, length, width, show_line=0, display_pic
         assert max(grid_point) <= max_point, '轨迹点超出图片最大限制！'
 
         track_picture = np.full((length, width), 0)  # 绘制白色底图
+        # track_picture = np.full((length, width), 999)  # 绘制黑色底图
         grid_point_list = [i for i in range(1, max_point+1, 1)]  # 轨迹点数组
         grid_point_array = np.array([grid_point_list[j*width:(j+1)*width]  # 轨迹点矩阵点
                                      for j in range(length)])  # 每个元素==图片像素点，并给像素点标序号
@@ -112,14 +113,17 @@ def track_2_picture(data_set, save_path, length, width, show_line=0, display_pic
             location = np.argwhere(grid_point_array == point)  # 在轨迹矩阵中定位轨迹点
             length_idx, width_idx = location[0][0], location[0][1]  # 获取轨迹点坐标
             track_picture[length_idx][width_idx] += 85  # 轨迹点数值变大，对应颜色加深
+            # track_picture[length_idx][width_idx] += 85  # 轨迹点数值变大，对应颜色变轻
 
-        linecolor = 'gainsboro' if show_line else 'white'
-        linewidths = 0.009 if show_line else 0
-        sns.heatmap(track_picture, cmap='CMRmap_r', xticklabels=0, yticklabels=0, cbar=0, vmin=0,
-                    vmax=999, linewidths=linewidths, linecolor=linecolor)  # 轨迹热力图
+        if show_line:
+            sns.heatmap(track_picture, cmap='CMRmap_r', xticklabels=0, yticklabels=0, cbar=0, vmin=0,
+                        vmax=999, linewidths='gainsboro', linecolor=0.009)  # 轨迹热力图
+        else:
+            sns.heatmap(track_picture, cmap='CMRmap_r', xticklabels=0, yticklabels=0, cbar=0, vmin=0,
+                        vmax=999)  # 轨迹热力图
         pic_name = str(round(float(track_id), 5)) + "_" + \
                    str(int(track_label[0])) + '.jpg'  # 轨迹图片命名
-        plt.savefig(save_path + pic_name, dpi=800)  # 轨迹图片保存
+        plt.savefig(save_path + pic_name, dpi=400)  # 轨迹图片保存
         if display_pic:  # 是否展示图片
             plt.show()
         plt.clf()  # 重置画布
