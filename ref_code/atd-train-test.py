@@ -8,6 +8,7 @@ import numpy as np
 import tensorflow as tf
 from sklearn import metrics
 import os
+from tqdm import tqdm
 
 
 class Config(object):
@@ -26,7 +27,7 @@ class Config(object):
     learning_rate = 1e-4  # 损失函数学习率
 
     batch_size = 32  # 批大小
-    num_epochs = 40  # 训练轮次
+    num_epochs = 1  # 训练轮次
 
 
 class RNN(object):
@@ -94,7 +95,7 @@ class RNN(object):
             self.acc = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
 
-def load_data(train_dir, test_dir):
+def load_data(train_dir, valid_dir, test_dir):
     """
     加载数据
     :param train_dir: 训练数据集
@@ -105,30 +106,40 @@ def load_data(train_dir, test_dir):
     # test_dir = "..\\data\\atd-rnn\\Test_2_3_4.txt"  # 验证数据集
     train_data = []
     train_labels = []
+    valid_data = []
+    valid_labels = []
     test_data = []
     test_labels = []
     with open(train_dir, "r") as fin:
         for line in fin:
             tmp = line.strip().split(" ")
             train_data.append(tmp[2:])
-            if tmp[0] == '1':
+            if tmp[0] == '1':  # FIXME 不需要做扰动这一步，需要跳过
                 train_labels.append([0, 1])
-                # 负样本重复
-                for _ in range(2):
-                    item = copy.deepcopy(tmp[2:])
-                    for j, k in enumerate(item):
-                        # 0.6 的概率产生扰动
-                        if random.random() < 0.6:
-                            continue
-                        item[j] = str(int(k) + (1 if random.random() < 0.5 else -1) * int(
-                            random.random() * 100))  # 正负方向上随机移动100个位置
-                        while (int(item[j]) < 0):
-                            item[j] = str(int(k) + (1 if random.random() < 0.5 else - 1) * int(
-                                random.random() * 100))  # 移动到小于0 的时候重新移动
-                    train_data.append(item)
-                    train_labels.append(copy.deepcopy(train_labels[-1]))
+                # 负样本重复 不做负样本重复！！！
+                # for _ in range(2):
+                #     item = copy.deepcopy(tmp[2:])
+                #     for j, k in enumerate(item):
+                #         # 0.6 的概率产生扰动
+                #         if random.random() < 0.6:
+                #             continue
+                #         item[j] = str(int(k) + (1 if random.random() < 0.5 else -1) * int(
+                #             random.random() * 100))  # 正负方向上随机移动100个位置
+                #         while (int(item[j]) < 0):
+                #             item[j] = str(int(k) + (1 if random.random() < 0.5 else - 1) * int(
+                #                 random.random() * 100))  # 移动到小于0 的时候重新移动
+                #     train_data.append(item)
+                #     train_labels.append(copy.deepcopy(train_labels[-1]))
             else:
                 train_labels.append([1, 0])
+    with open(valid_dir, "r") as fin:
+        for line in fin:
+            tmp = line.strip().split(" ")
+            valid_data.append(tmp[2:])
+            if (tmp[0] == '1'):
+                valid_labels.append([0, 1])
+            else:
+                valid_labels.append([1, 0])
     with open(test_dir, "r") as fin:
         for line in fin:
             tmp = line.strip().split(" ")
@@ -137,9 +148,14 @@ def load_data(train_dir, test_dir):
                 test_labels.append([0, 1])
             else:
                 test_labels.append([1, 0])
+
     word2id = {}
     id2word = {}
     for line in train_data:
+        for item in line:
+            if item not in word2id:
+                word2id[item] = len(word2id)
+    for line in valid_data:
         for item in line:
             if item not in word2id:
                 word2id[item] = len(word2id)
@@ -150,25 +166,25 @@ def load_data(train_dir, test_dir):
     id2word = {value: key for key, value in word2id.items()}
     train_seq_length = list(map(len, train_data))
     max_length1 = max(train_seq_length)
-    test_seq_length = list(map(len, test_data))
-    max_length2 = max(test_seq_length)
+    valid_seq_length = list(map(len, valid_data))
+    max_length2 = max(valid_seq_length)
     max_length = max(max_length1, max_length2)
     for i, line in enumerate(train_data):
         for j, item in enumerate(line):
             train_data[i][j] = word2id[item]
-    for i, line in enumerate(test_data):
+    for i, line in enumerate(valid_data):
         for j, item in enumerate(line):
-            test_data[i][j] = word2id[item]
+            valid_data[i][j] = word2id[item]
     # padding
     for i, line in enumerate(train_data):
         if (len(line) < max_length):
             line.extend([0] * (max_length - len(line)))
-    for i, line in enumerate(test_data):
+    for i, line in enumerate(valid_data):
         if (len(line) < max_length):
             line.extend([0] * (max_length - len(line)))
 
     return train_data, train_labels, train_seq_length, \
-           test_data, test_labels, test_seq_length, \
+           valid_data, valid_labels, valid_seq_length, \
            max_length, word2id, id2word
 
 
@@ -225,17 +241,15 @@ def generate_batch(train_data, train_labels, train_seq_length, batch_size):
         yield train_data[start: end].tolist(), train_labels[start: end].tolist(), seq_length[start: end].tolist()
 
 
-def train(train_data, train_label, train_seq_length, model):
-    acc_value = []
-    recall_value = []
-    precision_value = []
-    f1_value = []
+def train_and_test(train_data, train_label, train_seq_length, model,
+                   valid_data, valid_labels, valid_seq_length,
+                   test_file, result_save_path):
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        step = 0
-        acc = 0
-        allAcc = 0
-        for i in range(model.config.num_epochs):
+        valid_acc = []
+        train_loss = []
+        for epoch_idx in range(model.config.num_epochs):
+            batch_idx = 0
             for batch_x, batch_y, batch_length in generate_batch(train_data, train_label, train_seq_length,
                                                                  model.config.batch_size):
 
@@ -253,73 +267,103 @@ def train(train_data, train_label, train_seq_length, model):
                     model.seq_length: batch_length
                 })
 
-                _test_acc = sess.run(model.acc, feed_dict={
-                    model.input_x: test_data,
-                    model.input_y: test_labels,
+                valid_acc_batch = sess.run(model.acc, feed_dict={
+                    model.input_x: valid_data,
+                    model.input_y: valid_labels,
                     model.keep_prob: model.config.dropout_keep_prob,
-                    model.seq_length: test_seq_length
+                    model.seq_length: valid_seq_length
                 })
+                valid_acc.append(str(round(valid_acc_batch, 5)))
+                train_loss.append(str(round(_loss, 5)))
+                batch_idx += 1
+                print('epoch={} | batch={} | valid_acc={} | loss={}'.
+                             format(epoch_idx, batch_idx,
+                                    round(valid_acc_batch, 5), round(_loss, 5)))
 
-                tmp = [_test_acc]
-                tmp_precision = [0]
-                tmp_recall = [0]
-                tmp_f1 = [0]
-                for filename in testDirs:
-                    tmp_data, tmp_labels, tmp_seq = load_test_data(filename)
-                    predict = sess.run(model.y_pred_cls, feed_dict={
-                        model.input_x: tmp_data,
-                        model.input_y: tmp_labels,
-                        model.keep_prob: model.config.dropout_keep_prob,
-                        model.seq_length: tmp_seq
-                    })
-                    # print(predict)
-                    tmp_labels = [0 if item[0] == 1 else 1 for item in tmp_labels]
-                    acc = metrics.accuracy_score(tmp_labels, predict)
-                    precision = metrics.precision_score(tmp_labels, predict)
-                    recall = metrics.recall_score(tmp_labels, predict)
-                    f1 = metrics.f1_score(tmp_labels, predict)
-                    tmp.append(acc)
-                    tmp_precision.append(precision)
-                    tmp_recall.append(recall)
-                    tmp_f1.append(f1)
-                acc_value.append(tmp)
-                precision_value.append(tmp_precision)
-                recall_value.append(tmp_recall)
-                f1_value.append(tmp_f1)
-                print(
-                    "at step %d loss=%.6f \t acc=%.6f \t test_acc = %.6f\n _acc=%s\n precisions=%s \n recalls=%s \n f1=%s" % (
-                        step, _loss, _acc, _test_acc, tmp, tmp_precision, tmp_recall, tmp_f1))
-                step += 1
 
-    return acc_value, precision_value, recall_value, f1_value
+            each_epoch_each_batch_valid_acc = result_save_path + 'each_epoch_each_batch_valid_acc.txt'
+            file_1 = open(each_epoch_each_batch_valid_acc, 'w', encoding='utf-8')
+            for ii_idx, ii in enumerate(valid_acc):
+                file_1.write('epoch={} | batch={} | valid_acc={} | loss={}\n'.
+                             format(epoch_idx, ii_idx, ii, train_loss[ii_idx]))
+
+            # 轮次结束，开始测试 #
+            epoch_acc = []
+            epoch_precision = []
+            epoch_recall = []
+            epoch_f1 = []
+            tmp_data, tmp_labels, tmp_seq = load_test_data(test_file)
+            predict = sess.run(model.y_pred_cls, feed_dict={
+                model.input_x: tmp_data,
+                model.input_y: tmp_labels,
+                model.keep_prob: model.config.dropout_keep_prob,
+                model.seq_length: tmp_seq
+            })
+            tmp_labels = [0 if item[0] == 1 else 1 for item in tmp_labels]
+            acc = metrics.accuracy_score(tmp_labels, predict)
+            precision = metrics.precision_score(tmp_labels, predict)
+            recall = metrics.recall_score(tmp_labels, predict)
+            f1 = metrics.f1_score(tmp_labels, predict)
+
+            epoch_acc.append(round(acc, 5))
+            epoch_precision.append(round(precision, 5))
+            epoch_recall.append(round(recall, 5))
+            epoch_f1.append(round(f1, 5))
+
+        each_epoch_metrics = result_save_path + 'each_epoch_metrics.txt'
+        file_2 = open(each_epoch_metrics, 'w', encoding='utf-8')
+        for idx in range(len(epoch_acc)):
+            file_2.write('epoch={} | acc={} | precision={} | recall={} | f1={}\n'.
+                         format(idx, epoch_acc[idx], epoch_precision[idx], epoch_recall[idx], epoch_f1[idx]))
+        print('epoch={} | acc={} | precision={} | recall={} | f1={}'.
+                         format(epoch_idx, round(acc, 5), round(precision, 5),
+                                round(recall, 5), round(f1, 5)))
+
+        file_1.close()
+        file_2.close()
 
 
 if __name__ == "__main__":
-    ####### 训练过程 ##########
-    train_dir = None
-    test_dir = None
-    train_data, train_labels, train_seq_length, \
-    test_data, test_labels, test_seq_length, \
-    max_length, word2id, id2word = load_data(train_dir, test_dir)
-    n = len(train_data)
-    index = np.random.permutation(n)
-    train_data = np.array(train_data)
-    train_data = train_data[index].tolist()
-    train_labels = np.array(train_labels)
-    train_labels = train_labels[index].tolist()
-    train_seq_length = np.array(train_seq_length)
-    train_seq_length = train_seq_length[index].tolist()
+    data_base_path = '..\\save\\ref_code_save\\'
+    grids = ['Grid200_no_-1\\', 'Grid300_no_-1\\', 'Grid400_no_-1\\']
+    for grid in grids:
+        dirs = os.listdir(data_base_path + grid)
+        for dir in dirs:
+            train_file = data_base_path + grid + dir + '\\' + dir + '_train.txt'
+            valid_file = data_base_path + grid + dir + '\\' + dir + '_valid.txt'
+            test_file = data_base_path + grid + dir + '\\' + dir + '_test.txt'
+            result_save_path = data_base_path + grid + dir + '\\'
 
-    print("训练集中异常轨迹的比例: {}".  # TODO 这里要搞清楚比例是怎么算出来的
-          format(sum([item[1] for item in train_labels]) / len(train_labels)))
-    print("测试集中异常轨迹的比例: {}".  # TODO 这里要搞清楚比例是怎么算出来的
-          format(sum(item[1] for item in test_labels) / len(test_labels)))
+            # 训练过程 #
+            train_data, train_labels, train_seq_length, \
+            valid_data, valid_labels, valid_seq_length, \
+            max_length, word2id, id2word = load_data(train_file, valid_file, test_file)
+            n = len(train_data)
+            index = np.random.permutation(n)
+            train_data = np.array(train_data)
+            train_data = train_data[index].tolist()
+            train_labels = np.array(train_labels)
+            train_labels = train_labels[index].tolist()
+            train_seq_length = np.array(train_seq_length)
+            train_seq_length = train_seq_length[index].tolist()
 
-    config = Config()
-    config.seq_length = max_length
-    config.vocab_size = len(word2id)
-    model = RNN(config)
+            print("训练集中异常轨迹的比例: {}".  # TODO 这里要搞清楚比例是怎么算出来的，而且可能不要要这些
+                  format(round(sum([item[1] for item in train_labels]) / len(train_labels)), 9))
+            print("验证集中异常轨迹的比例: {}".  # TODO 这里要搞清楚比例是怎么算出来的 而且可能不需要这些
+                  format(round(sum(item[1] for item in valid_labels) / len(valid_labels)), 9))
 
+            config = Config()
+            config.seq_length = max_length
+            config.vocab_size = len(word2id)
+            model = RNN(config)
 
-
-
+            train_and_test(train_data=train_data,
+                           train_label=train_labels,
+                           train_seq_length=train_seq_length,
+                           model=model,
+                           valid_data=valid_data,
+                           valid_labels=valid_labels,
+                           valid_seq_length=valid_seq_length,
+                           test_file=test_file,
+                           result_save_path=result_save_path)
+            exit()

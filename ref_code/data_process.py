@@ -53,18 +53,25 @@ def write_txt(base_path, dataset, save_path):
             f.write('\n')
     with open(file, 'r', encoding='utf-8') as f_2:
         contend = f_2.readlines()
-        train_data, test_data = train_test_split(contend, shuffle=True, train_size=0.7, test_size=0.3,
-                                                 random_state=2021)
+        train_data, valid_test_data = train_test_split(
+            contend, shuffle=True, train_size=0.8, test_size=0.2, random_state=2021)
+        valid_data, test_data = train_test_split(
+            valid_test_data, shuffle=True, train_size=0.1, test_size=0.1, random_state=2021)
 
         train_f = save_path + dataset.split('.csv')[0] + '_train.txt'
         with open(train_f, 'w', encoding='utf-8') as f_3:
             for row in train_data:
                 f_3.write(row)
 
-        test_f = save_path + dataset.split('.csv')[0] + '_test.txt'
-        with open(test_f, 'w', encoding='utf-8') as f_4:
-            for row in test_data:
+        valid_f = save_path + dataset.split('.csv')[0] + '_valid.txt'
+        with open(valid_f, 'w', encoding='utf-8') as f_4:
+            for row in valid_data:
                 f_4.write(row)
+
+        test_f = save_path + dataset.split('.csv')[0] + '_test.txt'
+        with open(test_f, 'w', encoding='utf-8') as f_5:
+            for row in test_data:
+                f_5.write(row)
 
 
 if __name__ == "__main__":

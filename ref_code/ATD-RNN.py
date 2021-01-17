@@ -128,8 +128,8 @@ def loadData():
                         while (int(item[j]) < 0):
                             item[j] = str(int(k) + (1 if random.random() < 0.5 else - 1) * int(
                                 random.random() * 100))  # 移动到小于0 的时候重新移动
-                    train_data.append(item)
-                    train_labels.append(copy.deepcopy(train_labels[-1]))
+                    train_data.append(item)  # 新增一条异常轨迹
+                    train_labels.append(copy.deepcopy(train_labels[-1]))  # 新增异常轨迹的标签
             else:
                 train_labels.append([1, 0])
     with open(TESTDIR, "r") as fin:
@@ -169,18 +169,9 @@ def loadData():
     for i, line in enumerate(test_data):
         if (len(line) < max_length):
             line.extend([0] * (max_length - len(line)))
-    return train_data, train_labels, train_seq_length, test_data, test_labels, test_seq_length, max_length, word2id, id2word
-
-
-train_data, train_labels, train_seq_length, test_data, test_labels, test_seq_length, max_length, word2id, id2word = loadData()
-n = len(train_data)
-index = np.random.permutation(n)
-train_data = np.array(train_data)
-train_data = train_data[index].tolist()
-train_labels = np.array(train_labels)
-train_labels = train_labels[index].tolist()
-train_seq_length = np.array(train_seq_length)
-train_seq_length = train_seq_length[index].tolist()
+    return train_data, train_labels, train_seq_length, \
+           test_data, test_labels, test_seq_length, \
+           max_length, word2id, id2word
 
 
 def loadTestData(filename):
@@ -203,15 +194,6 @@ def loadTestData(filename):
     return res_data, res_labels, res_seq_length
 
 
-testDirs = ["..\\data\\atd-rnn\\rnnTest%d.txt" % i for i in testIds]
-
-
-print("train neg percent: ")
-print(sum([item[1] for item in train_labels]) / len(train_labels))
-print("test neg percent: ")
-print(sum(item[1] for item in test_labels) / len(test_labels))
-
-
 def generate_batch(train_data, train_labels, train_seq_length, batch_size):
     train_data = np.array(train_data)
     train_labels = np.array(train_labels)
@@ -232,18 +214,6 @@ def generate_batch(train_data, train_labels, train_seq_length, batch_size):
         yield train_data[start: end].tolist(), train_labels[start: end].tolist(), seq_length[start: end].tolist()
 
 
-config = Config()
-config.seq_length = max_length
-config.vocab_size = len(word2id)
-model = RNN(config)
-
-
-accs = []
-precisions = []
-recalls = []
-f1s = []
-
-
 def train():
     global accs, recalls
     with tf.Session() as sess:
@@ -254,9 +224,6 @@ def train():
         for i in range(model.config.num_epochs):
             for batch_x, batch_y, batch_length in generate_batch(train_data, train_labels, train_seq_length,
                                                                  model.config.batch_size):
-                # print(batch_x)
-                # print(batch_y)
-                # print(batch_length)
                 _states, _loss, _ = sess.run([model._states, model.loss, model.optim], feed_dict={
                     model.input_x: batch_x,
                     model.input_y: batch_y,
@@ -277,12 +244,7 @@ def train():
                     model.keep_prob: model.config.dropout_keep_prob,
                     model.seq_length: test_seq_length
                 })
-                # print(_loss)
 
-                # print(len(_states))
-                # print(len(_states[0]))
-                # print(_states)
-                # print(_predict)
                 tmp = [_test_acc]
                 tmp_precision = [0]
                 tmp_recall = [0]
@@ -295,7 +257,7 @@ def train():
                         model.keep_prob: model.config.dropout_keep_prob,
                         model.seq_length: tmp_seq
                     })
-                    # print(predict)
+
                     tmp_labels = [0 if item[0] == 1 else 1 for item in tmp_labels]
                     acc = metrics.accuracy_score(tmp_labels, predict)
                     precision = metrics.precision_score(tmp_labels, predict)
@@ -310,14 +272,43 @@ def train():
                 recalls.append(tmp_recall)
                 f1s.append(tmp_f1)
                 print(
-                    "at step %d loss=%.6f \t acc=%.6f \t test_acc = %.6f\n _acc=%s\n precisions=%s \n recalls=%s \n f1=%s" % (
+                    "at step %d loss=%.6f \t "
+                    "acc=%.6f \t test_acc = %.6f\n "
+                    "_acc=%s\n precisions=%s \n recalls=%s \n f1=%s" % (
                         step, _loss, _acc, _test_acc, tmp, tmp_precision, tmp_recall, tmp_f1))
                 step += 1
 
 
+train_data, train_labels, train_seq_length, \
+test_data, test_labels, test_seq_length, \
+max_length, word2id, id2word = loadData()
+n = len(train_data)
+index = np.random.permutation(n)
+train_data = np.array(train_data)
+train_data = train_data[index].tolist()
+train_labels = np.array(train_labels)
+train_labels = train_labels[index].tolist()
+train_seq_length = np.array(train_seq_length)
+train_seq_length = train_seq_length[index].tolist()
+
+testDirs = ["..\\data\\atd-rnn\\rnnTest%d.txt" % i for i in testIds]
+
+print("train neg percent: ")
+print(sum([item[1] for item in train_labels]) / len(train_labels))
+print("test neg percent: ")
+print(sum(item[1] for item in test_labels) / len(test_labels))
+
+config = Config()
+config.seq_length = max_length
+config.vocab_size = len(word2id)
+model = RNN(config)
+
+accs = []
+precisions = []
+recalls = []
+f1s = []
 
 train()
-
 
 index = np.argmax(accs, axis=0)
 accs = np.array(accs)
@@ -328,6 +319,5 @@ recalls = np.array(recalls)
 print("recall", recalls[index, [0, 1, 2, 3]])
 f1s = np.array(f1s)
 print("f1:", f1s[index, [0, 1, 2, 3]])
-
 
 print("Done!")
