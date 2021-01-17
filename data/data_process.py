@@ -60,7 +60,9 @@ def read_process_write_csv(read_file, write_file):
         csv_writer.writerow(["trip_id", "latitude", "lngitude", "gridline", "call_type",
                              "taxi_id", "timestamp", "labels"])
         for key, value in track_dict.items():
-            csv_writer.writerow(value)
+            write_contend = [value['id'], value['latitude'], value['longitude'], value['grid_point'],
+                             value['call_type'], value['taxi_id'], value['timestamp'], value['label']]
+            csv_writer.writerow(write_contend)
 
 
 if __name__ == "__main__":

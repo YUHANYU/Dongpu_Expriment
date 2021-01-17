@@ -68,11 +68,8 @@ def write_txt(base_path, dataset, save_path):
 
 
 if __name__ == "__main__":
-    run_parm = {'Grid200':{'length': 240, 'width': 180},
-                'Grid300':{'length': 165, 'width': 120},
-                'Grid400':{'length': 124, 'width': 90}}
     base_path = '..\\data\\'
-    grids = ['Grid200\\', 'Grid300\\', 'Grid400\\']
+    grids = ['Grid200_no_-1\\', 'Grid300_no_-1\\', 'Grid400_no_-1\\']
     save_base_path = '..\\save\\ref_code_save\\'
     for grid in grids:
         files = os.listdir(base_path + grid)
