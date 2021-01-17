@@ -366,4 +366,3 @@ if __name__ == "__main__":
                            valid_seq_length=valid_seq_length,
                            test_file=test_file,
                            result_save_path=result_save_path)
-            exit()
