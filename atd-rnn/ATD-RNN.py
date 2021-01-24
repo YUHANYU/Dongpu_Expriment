@@ -191,6 +191,7 @@ def loadTestData(filename):
             tmp_data = [word2id[item] for item in tmp]
             tmp_data = tmp_data + [0] * (max_length - n)
             res_data.append(tmp_data)
+    res_data_len = list(set([len(i) for i in res_data]))
     return res_data, res_labels, res_seq_length
 
 

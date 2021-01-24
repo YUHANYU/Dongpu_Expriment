@@ -154,7 +154,7 @@ def load_data(train_dir, valid_dir, test_dir):
     for line in train_data:
         for item in line:
             if item not in word2id:
-                word2id[item] = len(word2id)
+                word2id[item] = len(word2id)  # FIXME 一个索引的值是否能为1？
     for line in valid_data:
         for item in line:
             if item not in word2id:
@@ -168,7 +168,9 @@ def load_data(train_dir, valid_dir, test_dir):
     max_length1 = max(train_seq_length)
     valid_seq_length = list(map(len, valid_data))
     max_length2 = max(valid_seq_length)
-    max_length = max(max_length1, max_length2)
+    test_seq_length = list(map(len, test_data))
+    max_length3 = max(test_seq_length)
+    max_length = max(max_length1, max_length2, max_length3)
     for i, line in enumerate(train_data):
         for j, item in enumerate(line):
             train_data[i][j] = word2id[item]
@@ -188,7 +190,7 @@ def load_data(train_dir, valid_dir, test_dir):
            max_length, word2id, id2word
 
 
-def load_test_data(filename):
+def load_test_data(filename, max_len):
     """
     加载测试数据
     :param filename:  文件名
@@ -197,10 +199,11 @@ def load_test_data(filename):
     res_data = []
     res_labels = []
     res_seq_length = []
-    with open(filename, "r") as fin:
-        for line in fin:
+    with open(filename, "r", encoding='utf-8') as fin:
+        for idx, line in enumerate(fin):
             tmp = line.strip().split()
-            if (tmp[0] == "0"):
+            # tmp = line.rstrip('\n').split(' ')[:-1]
+            if (tmp[0] == '0'):
                 res_labels.append([1, 0])
             else:
                 res_labels.append([0, 1])
@@ -208,8 +211,9 @@ def load_test_data(filename):
             n = len(tmp)
             res_seq_length.append(n)
             tmp_data = [word2id[item] for item in tmp]
-            tmp_data = tmp_data + [0] * (max_length - n)
+            tmp_data = tmp_data + [0] * (max_len - n)
             res_data.append(tmp_data)
+
     return res_data, res_labels, res_seq_length
 
 
@@ -280,8 +284,7 @@ def train_and_test(train_data, train_label, train_seq_length, model,
                              format(epoch_idx, batch_idx,
                                     round(valid_acc_batch, 5), round(_loss, 5)))
 
-
-            each_epoch_each_batch_valid_acc = result_save_path + 'each_epoch_each_batch_valid_acc.txt'
+            each_epoch_each_batch_valid_acc = result_save_path + '_each_epoch_each_batch_valid_acc.txt'
             file_1 = open(each_epoch_each_batch_valid_acc, 'w', encoding='utf-8')
             for ii_idx, ii in enumerate(valid_acc):
                 file_1.write('epoch={} | batch={} | valid_acc={} | loss={}\n'.
@@ -292,12 +295,12 @@ def train_and_test(train_data, train_label, train_seq_length, model,
             epoch_precision = []
             epoch_recall = []
             epoch_f1 = []
-            tmp_data, tmp_labels, tmp_seq = load_test_data(test_file)
+            tmp_data, tmp_labels, tmp_seq = load_test_data(test_file, max_length)
             predict = sess.run(model.y_pred_cls, feed_dict={
                 model.input_x: tmp_data,
                 model.input_y: tmp_labels,
                 model.keep_prob: model.config.dropout_keep_prob,
-                model.seq_length: tmp_seq
+                model.seq_length: tmp_seq  # FIXME 维数不一致导致报错！
             })
             tmp_labels = [0 if item[0] == 1 else 1 for item in tmp_labels]
             acc = metrics.accuracy_score(tmp_labels, predict)
@@ -310,7 +313,7 @@ def train_and_test(train_data, train_label, train_seq_length, model,
             epoch_recall.append(round(recall, 5))
             epoch_f1.append(round(f1, 5))
 
-        each_epoch_metrics = result_save_path + 'each_epoch_metrics.txt'
+        each_epoch_metrics = result_save_path + '_each_epoch_metrics.txt'
         file_2 = open(each_epoch_metrics, 'w', encoding='utf-8')
         for idx in range(len(epoch_acc)):
             file_2.write('epoch={} | acc={} | precision={} | recall={} | f1={}\n'.
@@ -324,15 +327,17 @@ def train_and_test(train_data, train_label, train_seq_length, model,
 
 
 if __name__ == "__main__":
-    data_base_path = '..\\save\\ref_code_save\\'
-    grids = ['Grid200_no_-1\\', 'Grid300_no_-1\\', 'Grid400_no_-1\\']
+    data_base_path = '..\\save\\atd-rnn\\'
+    grids = ['Grid300\\', 'Grid400\\']
     for grid in grids:
-        dirs = os.listdir(data_base_path + grid)
-        for dir in dirs:
-            train_file = data_base_path + grid + dir + '\\' + dir + '_train.txt'
-            valid_file = data_base_path + grid + dir + '\\' + dir + '_valid.txt'
-            test_file = data_base_path + grid + dir + '\\' + dir + '_test.txt'
-            result_save_path = data_base_path + grid + dir + '\\'
+        files = os.listdir(data_base_path + grid)
+        files.remove('valid.txt')
+        files.remove('test.txt')
+        for file in files:
+            train_file = data_base_path + grid + file
+            valid_file = data_base_path + grid + 'valid.txt'
+            test_file = data_base_path + grid + 'test.txt'
+            result_save_path = data_base_path + grid + file.split('.txt')[0]
 
             # 训练过程 #
             train_data, train_labels, train_seq_length, \
@@ -366,4 +371,5 @@ if __name__ == "__main__":
                            valid_seq_length=valid_seq_length,
                            test_file=test_file,
                            result_save_path=result_save_path)
+            exit()
             tf.reset_default_graph()
