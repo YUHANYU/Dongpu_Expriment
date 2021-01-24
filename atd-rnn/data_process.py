@@ -51,37 +51,37 @@ def write_txt(base_path, dataset, save_path):
             for i in grid_point:
                 f.write(str(i) + ' ')
             f.write('\n')
-    with open(file, 'r', encoding='utf-8') as f_2:
-        contend = f_2.readlines()
-        train_data, valid_test_data = train_test_split(
-            contend, shuffle=True, train_size=0.8, test_size=0.2, random_state=2021)
-        valid_data, test_data = train_test_split(
-            valid_test_data, shuffle=True, train_size=0.1, test_size=0.1, random_state=2021)
-
-        train_f = save_path + dataset.split('.csv')[0] + '_train.txt'
-        with open(train_f, 'w', encoding='utf-8') as f_3:
-            for row in train_data:
-                f_3.write(row)
-
-        valid_f = save_path + dataset.split('.csv')[0] + '_valid.txt'
-        with open(valid_f, 'w', encoding='utf-8') as f_4:
-            for row in valid_data:
-                f_4.write(row)
-
-        test_f = save_path + dataset.split('.csv')[0] + '_test.txt'
-        with open(test_f, 'w', encoding='utf-8') as f_5:
-            for row in test_data:
-                f_5.write(row)
+    # with open(file, 'r', encoding='utf-8') as f_2:
+    #     contend = f_2.readlines()
+    #     train_data, valid_test_data = train_test_split(
+    #         contend, shuffle=True, train_size=0.8, test_size=0.2, random_state=2021)
+    #     valid_data, test_data = train_test_split(
+    #         valid_test_data, shuffle=True, train_size=0.1, test_size=0.1, random_state=2021)
+    #
+    #     train_f = save_path + dataset.split('.csv')[0] + '_train.txt'
+    #     with open(train_f, 'w', encoding='utf-8') as f_3:
+    #         for row in train_data:
+    #             f_3.write(row)
+    #
+    #     valid_f = save_path + dataset.split('.csv')[0] + '_valid.txt'
+    #     with open(valid_f, 'w', encoding='utf-8') as f_4:
+    #         for row in valid_data:
+    #             f_4.write(row)
+    #
+    #     test_f = save_path + dataset.split('.csv')[0] + '_test.txt'
+    #     with open(test_f, 'w', encoding='utf-8') as f_5:
+    #         for row in test_data:
+    #             f_5.write(row)
 
 
 if __name__ == "__main__":
     base_path = '..\\data\\'
-    grids = ['Grid200_no_-1\\', 'Grid300_no_-1\\', 'Grid400_no_-1\\']
-    save_base_path = '..\\save\\ref_code_save\\'
+    grids = ['Grid300\\', 'Grid400\\']
+    save_base_path = '..\\save\\atd-rnn\\'
     for grid in grids:
         files = os.listdir(base_path + grid)
         for f in files:
-            save_path = save_base_path + grid + f.split('.')[0] + '\\'
+            save_path = save_base_path + grid
             if not os.path.exists(save_path):
                 os.makedirs(save_path)
             write_txt(base_path=base_path + grid, dataset=f, save_path= save_path)
