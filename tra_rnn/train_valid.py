@@ -2,6 +2,7 @@
 轨迹LSTM模型的训练和验证
 """
 
+import os
 import datetime
 from sklearn.metrics import precision_score, accuracy_score, recall_score, f1_score
 
@@ -19,7 +20,7 @@ from tqdm import tqdm
 
 from model import TrackLSTM
 from data_process import merge_read_csv, track_process, split_train_valid_infer, \
-    batch_2_tensor, data_save
+    batch_2_tensor, data_save, read_track_csv
 
 
 class ModelTrainValid():
@@ -199,32 +200,50 @@ class ModelTrainValid():
 
 
 if __name__ == "__main__":
-    tracks = merge_read_csv(config.abnormal_tra_1500_dataset, config.normal_tra_dataset)
+    data_base_path = '..\\data\\'
+    grids = ['Grid300\\', 'Grid400\\']
+    for grid in grids:
+        files = os.listdir(data_base_path + grid)
+        files.remove('valid.csv')
+        files.remove('test.csv')
+        for file in files:
+            train_file = data_base_path + grid + file
+            valid_file = data_base_path + grid + 'valid.csv'
+            infer_file = data_base_path + grid + 'test.csv'
 
-    tracks, max_track_dot = track_process(tracks)
-    train_track, valid_track, infer_track = split_train_valid_infer(tracks, config)
-    data_save(train_track, 'train')  # 训练轨迹数据保存
-    data_save(valid_track, 'valid')  # 验证轨迹数据保存
-    data_save(infer_track, 'infer')  # 推理轨迹数据保存
+            train_track = track_process(read_track_csv(train_file))
+            valid_track = track_process(read_track_csv(valid_file))
+            infer_track = track_process(read_track_csv(infer_file))
 
-    train_track_data_loader = DataLoader(train_track, batch_size=config.batch_size,
-                                         shuffle=True, drop_last=False)
-    valid_track_data_loader = DataLoader(valid_track, batch_size=16,
-                                         shuffle=True, drop_last=False)
+            # FIXME 要把所有轨迹映射到统一标准的索引中
 
-    track_lstm_model = TrackLSTM(  # 轨迹LSTM
-        input_size=max_track_dot,
-        hidden_size=config.hidden_size,
-        bi_lstm=config.bi_lstm,
-        n_layers=config.n_layers,
-        dropout=config.dropout).to(config.device)
+        #=== 原始代码 ===#
+        tracks = merge_read_csv(config.abnormal_tra_1500_dataset, config.normal_tra_dataset)
 
-    optimizer = optim.Adam(track_lstm_model.parameters(), lr=config.lr)
+        tracks, max_track_dot = track_process(tracks)
+        train_track, valid_track, infer_track = split_train_valid_infer(tracks, config)
+        data_save(train_track, 'train')  # 训练轨迹数据保存
+        data_save(valid_track, 'valid')  # 验证轨迹数据保存
+        data_save(infer_track, 'infer')  # 推理轨迹数据保存
 
-    model_train_valid = ModelTrainValid(
-        config=config,
-        model=track_lstm_model,
-        train_data_loader=train_track_data_loader,
-        valid_data_loader=valid_track_data_loader,
-        optimizer=optimizer)
-    model_train_valid.train()
+        train_track_data_loader = DataLoader(train_track, batch_size=config.batch_size,
+                                             shuffle=True, drop_last=False)
+        valid_track_data_loader = DataLoader(valid_track, batch_size=16,
+                                             shuffle=True, drop_last=False)
+
+        track_lstm_model = TrackLSTM(  # 轨迹LSTM
+            input_size=max_track_dot,
+            hidden_size=config.hidden_size,
+            bi_lstm=config.bi_lstm,
+            n_layers=config.n_layers,
+            dropout=config.dropout).to(config.device)
+
+        optimizer = optim.Adam(track_lstm_model.parameters(), lr=config.lr)
+
+        model_train_valid = ModelTrainValid(
+            config=config,
+            model=track_lstm_model,
+            train_data_loader=train_track_data_loader,
+            valid_data_loader=valid_track_data_loader,
+            optimizer=optimizer)
+        model_train_valid.train()

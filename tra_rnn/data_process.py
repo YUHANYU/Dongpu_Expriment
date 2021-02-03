@@ -46,6 +46,7 @@ def read_track_csv(dataset):
     :return: 返回所有轨迹的字典
     """
     csv_reader = csv.reader(open(dataset, encoding='utf-8', mode='r'))  # 读取数据csv文件
+    next(csv_reader)
     tracks = {}  # 所有轨迹的字典
     for idx, row in enumerate(csv_reader):
         track = {}  # 单条轨迹字典
@@ -187,7 +188,7 @@ def batch_2_tensor(batch_data):
 
 def split_train_valid_infer(tracks, config):
     """
-
+    将数据集拆分为训练-验证和测试数据
     :param normal_data: 正常轨迹数据
     :param abnormal_data: 异常轨迹数据
     :param config: 参数对象
@@ -217,6 +218,16 @@ def data_save(original_data, data_type='train'):
     }
     data_name = config.sava_base_path + data_type + '.pt'
     torch.save(data_dict, data_name)
+
+
+def load_data(train, valid, infer):
+    """
+    加载数据，
+    :param train: 训练数据
+    :param valid: 验证数据
+    :param infer: 测试数据
+    :return:
+    """
 
 
 

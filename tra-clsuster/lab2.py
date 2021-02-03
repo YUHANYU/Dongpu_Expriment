@@ -387,24 +387,18 @@ def main(read_file, write_file, result_save_path, E, min_lns):
 
 
 if __name__ == '__main__':
-    e_value = [i for i in range(1, 100, 1)]
-    min_lns = [j for j in range(1, 100, 1)]
-    for e in e_value:
-        for lns in min_lns:
-            base_data_path = '..\\data\\'
-            grids = ['Grid200_no_-1\\', 'Grid300_no_-1\\', 'Grid400_no_-1\\']
-            save_path = '..\\save\\tra_cluster\\'
-            for grid in grids:
-                save_file_dir = save_path + grid
-                files = os.listdir(base_data_path + grid)
-                for file in files:
-                    read_file = base_data_path + grid + file
-                    write_path = save_path + grid + file.split('.csv')[0]
-                    if not os.path.exists(write_path):
-                        os.makedirs(write_path)
-                    write_file = write_path + '\\' + file.split('.csv')[0] + '_cluster.csv'
-                    result_save_path = write_path + '\\' + file.split('.csv')[0] + '_result.txt'
-                    main(read_file, write_file, result_save_path, E=e, min_lns=lns)
-                    break
-                break
+    e = 31  # 预定义
+    lns = 20  # 预定义
+    base_data_path = '..\\data\\'
+    grids = ['Grid300\\', 'Grid400\\']
+    save_path = '..\\save\\tra_cluster\\'
+    for grid in grids:
+        save_file_dir = save_path + grid
+        read_file = base_data_path + grid + 'test.csv'
+        write_path = save_path + grid
+        if not os.path.exists(write_path):
+            os.makedirs(write_path)
+        write_file = write_path + '\\' + 'cluster_intermedia_file.csv'
+        result_save_path = write_path + 'cluster_result.txt'
+        main(read_file, write_file, result_save_path, E=e, min_lns=lns)
 

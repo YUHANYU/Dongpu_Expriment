@@ -27,7 +27,7 @@ class Config(object):
     learning_rate = 1e-4  # 损失函数学习率
 
     batch_size = 32  # 批大小
-    num_epochs = 1  # 训练轮次
+    num_epochs = 2  # 训练轮次
 
 
 class RNN(object):
@@ -371,5 +371,4 @@ if __name__ == "__main__":
                            valid_seq_length=valid_seq_length,
                            test_file=test_file,
                            result_save_path=result_save_path)
-            exit()
             tf.reset_default_graph()
