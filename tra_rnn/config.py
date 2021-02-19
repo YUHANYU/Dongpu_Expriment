@@ -14,17 +14,10 @@ class Config():
             'cuda' if torch.cuda.is_available() else 'cpu')  # 设备选择
         self.use_gpu = True if torch.cuda.is_available() else False  # 设备判断
 
-        self.base_path = '..\\data\\modify-data\\'
-        self.normal_tra_dataset = self.base_path + 'normal_data.csv'
-        self.abnormal_tra_500_dataset = self.base_path + 'abnormal_data_500.csv'
-        self.abnormal_tra_1000_dataset = self.base_path + 'abnormal_data_1000.csv'
-        self.abnormal_tra_1500_dataset = self.base_path + 'abnormal_data_1500.csv'
-        self.abnormal_tra_4880_dataset = self.base_path + 'abnormal_data_4880.csv'
+        self.data_base_path = '..\\data\\'  # 数据集基础路径
+        self.sava_base_path = '..\\save\\rnn_save\\'  # 模型结果保存基本路径
 
-        self.sava_base_path = '..\\save\\rnn_save\\'
         self.log = True  # 是否记录模型训练、验证和推理日志
-        self.train_log = self.sava_base_path + 'train_log.txt'
-        self.valid_log = self.sava_base_path + 'valid_log.txt'
 
         self.save_trained_model = True  # 是否保存训练模型
         self.save_trained_model_type = 'BEST'
@@ -34,16 +27,16 @@ class Config():
         self.classes = 2  # 标签类别
 
         self.epochs = 100
-        self.batch_size = 4
+        self.batch_size = 32
 
         self.train_ratio = 0.8
         self.valid_ratio = 0.05
         self.infer_ratio = 0.15
 
         self.bi_lstm = True
-        self.n_layers = 2
+        self.n_layers = 4
         self.dropout = 0.5
-        self.hidden_size = 4
+        self.hidden_size = 128
 
-        self.lr = 2e-3
+        self.lr = 0.0001
         self.grad_clip = 50.0

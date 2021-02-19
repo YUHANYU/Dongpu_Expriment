@@ -16,7 +16,7 @@ class TrackLSTM(nn.Module):
         super(TrackLSTM, self).__init__()
         """
         轨迹LSTM模型
-        :param input_size: 轨迹点的维度
+        :param input_size: 轨迹点的数量
         :param hidden_size: LSTM隐藏层大小
         :param bi_LSTM: LSTM模型是否双向，默认双向
         :param n_layers: LSTM层数，默认1层
@@ -48,23 +48,20 @@ class TrackLSTM(nn.Module):
         :param start_hidden: 初始LSTM隐藏层
         :return: LSTM计算输出
         """
-        input_tracks = input_tracks.transpose(0, 1)  # FIXME-20201229 模型计算有问题
-        tracks_embedding = self.embedding(input_tracks)  # 得到轨迹点的embedding max_len * batch_size
+        input_tracks = input_tracks.transpose(0, 1)  # [batch_size, max_len] --> [max_len, batch_size]
+        tracks_embedding = self.embedding(input_tracks)  # [max_len, batch_size, hidden_size]
         tracks_packed = torch.nn.utils.rnn.pack_padded_sequence(
             tracks_embedding, input_tracks_length)  # 压缩轨迹embedding
         output, hidden = self.lstm(tracks_packed, start_hidden)  # lstm网络学习轨迹embedding
-        output, _ = torch.nn.utils.rnn.pad_packed_sequence(output)  # 解压输出
+        output, _ = torch.nn.utils.rnn.pad_packed_sequence(output)  #  解压输出 [max_len, batch_size, hidden_size*bi]
         if config.bi_lstm:
             output = output[:, :, :self.hidden_size] + \
-                     output[:, :, self.hidden_size:]  # 双向叠加
+                     output[:, :, self.hidden_size:]  # 双向叠加 [max_len, batch_size, hidden_size]
 
-        output_1 = output.transpose(0, 1)
-        output_2 = output[:, -1, :]  # FIXME 这里转化有问题
-        # output_2 = output_1.permute(0, 2, 1)[:, :, -1]
+        output_1 = torch.sum(output, dim=0)  # [batch_size, hidden_size]
+        output_2 = self.dense(output_1)  # [batch_size, num_classes]
 
-        output_3 = self.dense(output_2)
-
-        return output_3
+        return output_2
 
     def __init_lstm_hidden(self):
         # TODO 初始化LSTM隐藏层
