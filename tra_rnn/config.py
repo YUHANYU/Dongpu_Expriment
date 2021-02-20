@@ -13,6 +13,8 @@ class Config():
         self.device = torch.device(
             'cuda' if torch.cuda.is_available() else 'cpu')  # 设备选择
         self.use_gpu = True if torch.cuda.is_available() else False  # 设备判断
+        if self.use_gpu:  # 在使用GPU的模式下指定第0块显卡
+            torch.cuda.set_device(0)
 
         self.data_base_path = '..\\data\\'  # 数据集基础路径
         self.sava_base_path = '..\\save\\rnn_save\\'  # 模型结果保存基本路径
