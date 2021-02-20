@@ -58,7 +58,12 @@ class TrackLSTM(nn.Module):
             output = output[:, :, :self.hidden_size] + \
                      output[:, :, self.hidden_size:]  # 双向叠加 [max_len, batch_size, hidden_size]
 
+        # output = torch.sigmoid(output)
+
         output_1 = torch.sum(output, dim=0)  # [batch_size, hidden_size]
+
+        output_1 = torch.sigmoid(output_1)
+
         output_2 = self.dense(output_1)  # [batch_size, num_classes]
 
         return output_2

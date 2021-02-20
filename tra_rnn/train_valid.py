@@ -4,6 +4,7 @@
 
 import os
 import datetime
+import sys
 from sklearn.metrics import precision_score, accuracy_score, recall_score, f1_score
 
 import torch
@@ -208,6 +209,7 @@ class ModelTrainValid():
 if __name__ == "__main__":
     grids = ['Grid300\\', 'Grid400\\']  # 数据集类型
     for grid in grids:
+        print(grid)
         if not os.path.exists(config.sava_base_path + grid):  # 判定是否有特定数据集的保存路径
             os.makedirs(config.sava_base_path + grid)
 

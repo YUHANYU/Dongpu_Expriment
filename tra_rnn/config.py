@@ -38,5 +38,5 @@ class Config():
         self.dropout = 0.5
         self.hidden_size = 128
 
-        self.lr = 0.0001
+        self.lr = 0.001
         self.grad_clip = 50.0
