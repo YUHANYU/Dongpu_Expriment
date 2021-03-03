@@ -70,9 +70,12 @@ class RNN(object):
             _outputs, self._states = tf.nn.dynamic_rnn(cell=rnn_cell, inputs=embedding_inputs,
                                                        sequence_length=self.seq_length, time_major=True,
                                                        dtype=tf.float32)
+
             _outputs = tf.transpose(_outputs, [1, 0, 2])
+            print(_outputs.shape)
             # last = _outputs[:,-1,:]
-            print(self._states)
+            for item in self._states:
+                print(item.c.shape)
             last = tf.concat([item.c for item in self._states], axis=1)
 
         with tf.name_scope("score"):

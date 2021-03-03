@@ -40,6 +40,12 @@ class TrackLSTM(nn.Module):
         # TODO 考虑堆叠式LSTM怎么构建
         self.dense = nn.Linear(in_features=hidden_size, out_features=config.classes,
                                bias=True)  # TODO 考察最后一层加不加偏置对模型预测效果的影响
+
+        self.dense_1 = nn.Linear(in_features=hidden_size*n_layers,
+                                      out_features=hidden_size)
+        self.dense_2 = nn.Linear(in_features=hidden_size,
+                                      out_features=config.classes)
+
     def forward(self, input_tracks, input_tracks_length, start_hidden=None):
         """
         轨迹LSTM模型前向计算
@@ -52,18 +58,24 @@ class TrackLSTM(nn.Module):
         tracks_embedding = self.embedding(input_tracks)  # [max_len, batch_size, hidden_size]
         tracks_packed = torch.nn.utils.rnn.pack_padded_sequence(
             tracks_embedding, input_tracks_length)  # 压缩轨迹embedding
-        output, hidden = self.lstm(tracks_packed, start_hidden)  # lstm网络学习轨迹embedding
+        output, hidden_cell = self.lstm(tracks_packed, start_hidden)  # lstm网络学习轨迹embedding
         output, _ = torch.nn.utils.rnn.pad_packed_sequence(output)  #  解压输出 [max_len, batch_size, hidden_size*bi]
         if config.bi_lstm:
             output = output[:, :, :self.hidden_size] + \
                      output[:, :, self.hidden_size:]  # 双向叠加 [max_len, batch_size, hidden_size]
 
-        # output = torch.sigmoid(output)
+        if config.atd_rnn:  # 如果采用ATD-RNN模型的计算方式
+            if config.bi_lstm:
+                hidden_state = hidden_cell[0][:self.n_layers, :, :] + hidden_cell[0][self.n_layers:, :, :]
+                hidden_state = torch.cat([item for item in hidden_state], dim=1)
+            else:
+                hidden_state = torch.cat([item for item in hidden_cell[0]], dim=1)
+            hidden_state_dense1 = torch.sigmoid(self.dense_1(hidden_state))
+            hidden_state_dense2 = self.dense_2(hidden_state_dense1)
+            return hidden_state_dense2
 
         output_1 = torch.sum(output, dim=0)  # [batch_size, hidden_size]
-
         output_1 = torch.sigmoid(output_1)
-
         output_2 = self.dense(output_1)  # [batch_size, num_classes]
 
         return output_2
@@ -71,3 +83,5 @@ class TrackLSTM(nn.Module):
     def __init_lstm_hidden(self):
         # TODO 初始化LSTM隐藏层
         pass
+
+

@@ -87,7 +87,7 @@ class ModelTrainValid():
                 this_batch_loss = self.__loss_calculate(model_out, track_label)  # 批平均损失
                 this_batch_loss.backward()  # 损失反向传播
                 self.optimizer.step()  # 优化器步进
-                print(this_batch_loss)
+                # print(this_batch_loss)
                 each_batch_loss.append(this_batch_loss.item())  # 获取该批次损失
 
                 predict_y_batch = torch.max(model_out, 1)[1].data.cpu().numpy()  # 当前批次预测结果
@@ -209,7 +209,6 @@ class ModelTrainValid():
 if __name__ == "__main__":
     grids = ['Grid300\\', 'Grid400\\']  # 数据集类型
     for grid in grids:
-        print(grid)
         if not os.path.exists(config.sava_base_path + grid):  # 判定是否有特定数据集的保存路径
             os.makedirs(config.sava_base_path + grid)
 
@@ -226,6 +225,9 @@ if __name__ == "__main__":
                 percent_dir = config.sava_base_path + grid + percent
                 os.makedirs(percent_dir)
 
+            print('训练文件为 {} | 轮次={} | 批大小={} | 双向={}| LSTM层数={} | 隐藏层大小={} | 学习率={}'.
+                  format(train_file.split('data\\')[1], config.epochs, config.batch_size, (config.bi_lstm),
+                         config.n_layers, config.hidden_size, config.lr))
             train_track = track_merge_line_label(read_track_csv(train_file))  # 训练轨迹
             valid_track = track_merge_line_label(read_track_csv(valid_file))  # 验证轨迹
             infer_track = track_merge_line_label(read_track_csv(infer_file))  # 测试轨迹
@@ -253,7 +255,7 @@ if __name__ == "__main__":
 
             # TODO 尝试使用Transformer的encoder部分作为轨迹特征提取器
 
-            optimizer = optim.SGD(track_lstm_model.parameters(), lr=config.lr)  # 模型优化器
+            optimizer = optim.Adam(track_lstm_model.parameters(), lr=config.lr)  # 模型优化器
 
             model_train_valid = ModelTrainValid(  # 模型训练-验证
                 config=config,

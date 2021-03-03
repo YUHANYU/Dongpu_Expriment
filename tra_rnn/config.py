@@ -39,6 +39,7 @@ class Config():
         self.n_layers = 4
         self.dropout = 0.5
         self.hidden_size = 128
+        self.atd_rnn = True
 
-        self.lr = 0.001
+        self.lr = 0.01
         self.grad_clip = 50.0
